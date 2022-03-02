@@ -10,6 +10,9 @@ from pyproj import Proj, transform
 import sklearn.metrics
 
 
+"""
+Stores and manipulates validation data.
+"""
 class ValidationSet():
     def __init__(self, path=None, projection=None):
         self.path = path
@@ -21,10 +24,11 @@ class ValidationSet():
             self.validation = self.validation.set_crs(projection)
 
         else:
-            self.projection = Proj('epsg:4326')
+            self.projection = Proj('epsg:4326') #defaults to epsg 4326 if no projection is provided
             self.validation = self.validation.set_crs(Proj('epsg:4326'))
 
     def reproject_validation(self, lat='lat', lon='lon', outProjection=None):
+        # Reprojects validation to a given epsg projection
         newLat, newLon = reproject(self.validation[lat], self.validation[lon], self.getProjection(), outProjection)
         self.validation[lat], self.validation[lon] = newLat, newLon
         self.validation = self.validation.to_crs(outProjection)
@@ -44,19 +48,25 @@ class ValidationSet():
     def getLon(self):
         return self.validation['lon']
 
-
+"""
+CropMask wrapper, given as raster/tiff file. 
+"""
 class CropMask:
     def __init__(self, path, projection=None) -> None:
         self.path = path
         self.data = ras.open(path)
 
         if projection is None:
-            self.projection = self.data.crs
+            if self.projection is None:
+                self.projection = "epsg:4326"
+            else:
+                self.projection = self.data.crs 
         else:  
             self.projection = Proj(projection)
 
 
     def sample_points(self, lat, lon) -> np.array:
+        #samples points from a given set of coords and outputs coords and data points
         if lat.size != lon.size:
             raise Exception("Input arrays are not of equal size.")
         coord_list = [(float(x),float(y)) for x,y in zip(lat, lon)]
@@ -76,7 +86,9 @@ class CropMask:
     def getName(self) -> str:
         return self.data.name
 
-
+"""
+Paired datastructure for validation and cropmask matches
+"""
 class MatchedSet():
     def __init__(self, cropmask, validation_data) -> None:
         if not (isinstance(cropmask, CropMask) and isinstance(validation_data, ValidationSet)):
