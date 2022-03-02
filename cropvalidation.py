@@ -17,12 +17,12 @@ class ValidationSet():
         self.projection = None
 
         if projection != None:
-            self.projection = projection 
+            self.projection = projection
             self.validation = self.validation.set_crs(projection)
-        else:
-            self.projection = 'epsg:4326'
-            self.validation = self.validation.set_crs('epsg:4326')
 
+        else:
+            self.projection = Proj('epsg:4326')
+            self.validation = self.validation.set_crs(Proj('epsg:4326'))
 
     def reproject_validation(self, lat='lat', lon='lon', outProjection=None):
         newLat, newLon = reproject(self.validation[lat], self.validation[lon], self.getProjection(), outProjection)
@@ -59,7 +59,7 @@ class CropMask:
     def sample_points(self, lat, lon) -> np.array:
         if lat.size != lon.size:
             raise Exception("Input arrays are not of equal size.")
-        coord_list = [(x,y) for x,y in zip(lat, lon)]
+        coord_list = [(float(x),float(y)) for x,y in zip(lat, lon)]
         extracted_values = self.data.sample(coord_list)
 
         return pd.DataFrame(zip(lat, lon, list(extracted_values)))
@@ -67,8 +67,8 @@ class CropMask:
     def getProjection(self):
         return self.projection
     
-    def getDirectory(self) -> str:
-        return str(self.data_dir)
+    def getPath(self) -> str:
+        return str(self.path)
     
     def getData(self) -> ras:
         return self.data
@@ -84,15 +84,19 @@ class MatchedSet():
         else:
             self.validation_data = validation_data
             self.cropmask = cropmask
-            self.data = pd.DataFrame(data= zip(validation_data.getData(), cropmask.sample_points(validation_data.getLat(), validation_data.getLon())),
-            columns=['lat', 'lon', 'validation', 'predicted'])
+            
+            self.data = pd.DataFrame(validation_data.getData()).astype(float)
+            self.data['cropmask'] = cropmask.sample_points(validation_data.getLat(), validation_data.getLon())[2].astype(float)
         
     def remove_filler(self):
-        return self.data.loc[self.data['validation'].isin([0,1]) & self.data['predicted'].isin([0,1])]
+        self.data = self.data.loc[self.data['crop_probability'].isin([0,1]) & self.data['cropmask'].isin([0,1])]
 
     def get_f1(self) -> float:
         #assumes dataset is already filtered 
-        return sklearn.metrics.f1_score(self.data['validation'], self.data['predicted'])
+        return sklearn.metrics.f1_score(self.data['crop_probability'], self.data['cropmask'])
+    
+    def getData(self):
+        return self.data
 
 
 def reproject(latIn, lonIn, ProjIn, ProjOut) -> np.array:
@@ -108,8 +112,3 @@ def reproject(latIn, lonIn, ProjIn, ProjOut) -> np.array:
         latOut.append(newLat), lonOut.append(newLon)
     
     return np.array(latOut), np.array(lonOut)
-
-
-
-
-    
