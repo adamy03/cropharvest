@@ -107,13 +107,18 @@ class MatchedSet():
         #assumes dataset is already filtered 
         return sklearn.metrics.f1_score(self.data['crop_probability'], self.data['cropmask'])
  
-    def report(self) -> float:
+    def report(self) -> np.array:
         #assumes dataset is already filtered 
-        return sklearn.metrics.classification_report(self.data['crop_probability'], self.data['cropmask'])
-    
+
+        target_names = ['non_crop', 'crop']
+        class_report = sklearn.metrics.classification_report(self.data['crop_probability'], self.data['cropmask'], target_names = target_names, output_dict=True)
+        accuracy = sklearn.metrics.accuracy_score(self.data['crop_probability'], self.data['cropmask'])
+        return np.array([self.get_f1(), accuracy, class_report['crop']['precision'], class_report['non_crop']['precision'], class_report['non_crop']['recall'], class_report['crop']['recall']])
+
+        # return sklearn.metrics.classification_report(self.data['crop_probability'], self.data['cropmask'], target_names = target_names)
+
     def getData(self):
         return self.data
-
 
 def reproject(latIn, lonIn, ProjIn, ProjOut) -> np.array:
     if latIn.size != latIn.size:
