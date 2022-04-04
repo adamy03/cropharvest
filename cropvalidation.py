@@ -102,20 +102,23 @@ class MatchedSet():
         self.data = self.data[((self.data.crop_probability == 1) | (self.data.crop_probability == 0)) & ((self.data.cropmask == 1) | (self.data.cropmask == 0))]
         #self.data = self.data[((self.data.crop_probability == 1) | (self.data.crop_probability == 0)) and (self.data.cropmask == 1) | (self.data.cropmask == 0))]
 
-
     def get_f1(self) -> float:
         #assumes dataset is already filtered 
         return sklearn.metrics.f1_score(self.data['crop_probability'], self.data['cropmask'])
  
-    def report(self) -> np.array:
+    def report(self, show_size=False) -> np.array:
         #assumes dataset is already filtered 
 
         target_names = ['non_crop', 'crop']
         class_report = sklearn.metrics.classification_report(self.data['crop_probability'], self.data['cropmask'], target_names = target_names, output_dict=True)
         accuracy = sklearn.metrics.accuracy_score(self.data['crop_probability'], self.data['cropmask'])
-        return np.array([self.get_f1(), accuracy, class_report['crop']['precision'], class_report['non_crop']['precision'], class_report['non_crop']['recall'], class_report['crop']['recall']])
 
-        # return sklearn.metrics.classification_report(self.data['crop_probability'], self.data['cropmask'], target_names = target_names)
+        report = np.array([self.get_f1(), accuracy, class_report['crop']['precision'], class_report['non_crop']['precision'], class_report['non_crop']['recall'], class_report['crop']['recall']])
+
+        if (show_size == True):
+            return np.append(report, int(len(self.data.index)))
+        else:
+            return report
 
     def getData(self):
         return self.data
